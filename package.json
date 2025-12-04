@@ -1,1 +1,15 @@
+{
+  "name": "kl-massing-backend",
+  "version": "1.0.0",
+  "description": "Backend for KL High-Rise massing -> Forma integration",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.0"
+  }
+}
 
