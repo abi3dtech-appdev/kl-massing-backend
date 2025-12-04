@@ -1,4 +1,53 @@
-// --- NEW: GLB → Forma Integrate API → URN ---
+import express from "express";
+import cors from "cors";
+import { getApsToken } from "./aps.js";
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+// ----- MIDDLEWARES -----
+
+// CORS for browser calls (Netlify → Render)
+app.use(cors());
+
+// JSON for non-GLB routes
+app.use(express.json());
+
+// Raw body just for /kl-massing (GLB bytes)
+app.use(
+  "/kl-massing",
+  express.raw({ type: "application/octet-stream", limit: "20mb" })
+);
+
+// ----- ROUTES -----
+
+// Health check
+app.get("/", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "KL massing backend is running on Render"
+  });
+});
+
+// APS token test
+app.get("/aps-token", async (req, res) => {
+  try {
+    const token = await getApsToken(); // string
+    res.json({
+      status: "ok",
+      message: "APS token acquired successfully",
+      tokenLength: token.length
+    });
+  } catch (err) {
+    console.error("APS token error:", err);
+    res.status(500).json({
+      status: "error",
+      message: err.message || "Failed to get APS token"
+    });
+  }
+});
+
+// --- GLB → Forma Integrate API → URN ---
 app.post("/kl-massing", async (req, res) => {
   try {
     const glbBuffer = req.body;
@@ -11,14 +60,16 @@ app.post("/kl-massing", async (req, res) => {
       });
     }
 
-    if (glbBuffer.length > 18 * 1024 * 1024) { // ~18MB safety margin (Forma limit ~20MB)
+    if (glbBuffer.length > 18 * 1024 * 1024) {
       return res.status(413).json({
         status: "error",
         message: "GLB file too large (max ~18MB)"
       });
     }
 
-    console.log(`Received GLB: ${glbBuffer.length.toLocaleString()} bytes`);
+    console.log(
+      `Received GLB: ${glbBuffer.length.toLocaleString()} bytes`
+    );
 
     // APS token (string)
     const token = await getApsToken();
@@ -40,10 +91,11 @@ app.post("/kl-massing", async (req, res) => {
       req.query.name ||
       `KL Massing – ${new Date().toISOString().split("T")[0]}`;
 
-    // Forma Integrate API – Create element from inline GLB (body shape must match docs)
-    const integrateUrl =
-      `https://developer.api.autodesk.com/forma/integrate/v1/projects/${projectId}/elements`;
+    // Forma Integrate API URL
+    const integrateUrl = `https://developer.api.autodesk.com/forma/integrate/v1/projects/${projectId}/elements`;
 
+    // NOTE: This body shape must match the official Integrate docs.
+    // Adjust if APS responds with validation errors.
     const requestBody = {
       data: {
         type: "elements",
@@ -94,7 +146,11 @@ app.post("/kl-massing", async (req, res) => {
     }
 
     if (!integrateResp.ok) {
-      console.error("Forma Integrate API error:", integrateResp.status, json);
+      console.error(
+        "Forma Integrate API error:",
+        integrateResp.status,
+        json
+      );
       return res.status(502).json({
         status: "error",
         message: `Forma Integrate API failed: ${integrateResp.status}`,
@@ -133,4 +189,9 @@ app.post("/kl-massing", async (req, res) => {
       message: err.message || "Unknown server error"
     });
   }
+});
+
+// ----- START SERVER -----
+app.listen(PORT, () => {
+  console.log(`KL massing backend listening on port ${PORT}`);
 });
