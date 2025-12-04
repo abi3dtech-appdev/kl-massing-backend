@@ -17,10 +17,10 @@ app.get("/", (req, res) => {
   });
 });
 
+// Test route: try to fetch an APS token and report success
 app.get("/aps-token", async (req, res) => {
   try {
     const token = await getApsToken();
-    // Don't return the full token to the browser – just length for sanity
     res.json({
       status: "ok",
       message: "APS token acquired successfully",
