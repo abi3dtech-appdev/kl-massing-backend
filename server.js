@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { getApsToken } from "./aps.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -14,6 +15,24 @@ app.get("/", (req, res) => {
     status: "ok",
     message: "KL massing backend is running on Render"
   });
+});
+
+app.get("/aps-token", async (req, res) => {
+  try {
+    const token = await getApsToken();
+    // Don't return the full token to the browser – just length for sanity
+    res.json({
+      status: "ok",
+      message: "APS token acquired successfully",
+      tokenLength: token.length
+    });
+  } catch (err) {
+    console.error("APS token error:", err);
+    res.status(500).json({
+      status: "error",
+      message: err.message || "Failed to get APS token"
+    });
+  }
 });
 
 // Placeholder for massing upload (we'll implement later)
